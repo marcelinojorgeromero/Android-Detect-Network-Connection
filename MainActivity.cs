@@ -1,5 +1,6 @@
 ﻿using System;
 using Android.Content;
+using Android.Telephony;
 using Android.Util;
 
 namespace NetworkDetection
@@ -9,18 +10,21 @@ namespace NetworkDetection
     using Android.OS;
     using Android.Widget;
 
-
     [Activity(Label = "Network Detection", MainLauncher = true, Icon = "@drawable/icon")]
-    public class Activity1 : Activity
+    public class MainActivity : Activity
     {
         private const string UnknownConnectionType = "N/A";
-        private static readonly string Tag = typeof(Activity1).FullName;
+        private static readonly string Tag = typeof(MainActivity).FullName;
 
         private ImageView _isConnectedImage;
         private ImageView _roamingImage;
         private ImageView _wifiImage;
-		private TextView _connectionType;
+        private ImageView _signalStrengthImage;
+        private TextView _connectionType;
+        private TextView _signalStrength;
 
+        private TelephonyManager _telephonyManager;
+        
         private NetworkStatusBroadcastReceiver _broadcastReceiver;
         public event EventHandler NetworkStatusChanged;
 
@@ -29,19 +33,21 @@ namespace NetworkDetection
             base.OnCreate(bundle);
             SetContentView(Resource.Layout.Main);
 
-            _wifiImage = FindViewById<ImageView>(Resource.Id.wifi_image);
-            _roamingImage = FindViewById<ImageView>(Resource.Id.roaming_image);
-            _isConnectedImage = FindViewById<ImageView>(Resource.Id.is_connected_image);
-			_connectionType = FindViewById<TextView>(Resource.Id.connection_type_text);
+            FindViews();
+
+            InitSignalStrengthListener();
 
             SetInterfaceOffline();
         }
 
-        protected override void OnStart()
+        private void FindViews()
         {
-            base.OnStart();
-            DetectNetwork();
-            InitBroadcastReceiver();
+            _wifiImage = FindViewById<ImageView>(Resource.Id.wifi_image);
+            _roamingImage = FindViewById<ImageView>(Resource.Id.roaming_image);
+            _isConnectedImage = FindViewById<ImageView>(Resource.Id.is_connected_image);
+            _signalStrengthImage = FindViewById<ImageView>(Resource.Id.imgSignalStrength);
+            _connectionType = FindViewById<TextView>(Resource.Id.connection_type_text);
+            _signalStrength = FindViewById<TextView>(Resource.Id.txtSignalStrength);
         }
 
         private void InitBroadcastReceiver()
@@ -55,10 +61,19 @@ namespace NetworkDetection
               new IntentFilter(ConnectivityManager.ConnectivityAction));
         }
 
-        private void OnNetworkStatusChanged(object sender, EventArgs e)
+        private void InitSignalStrengthListener()
         {
-            NetworkStatusChanged?.Invoke(this, EventArgs.Empty);
+            _telephonyManager = (TelephonyManager)GetSystemService(TelephonyService);
+            var signalStrengthReceiver = new SignalStrengthBroadcastReceiver();
+            _telephonyManager.Listen(signalStrengthReceiver, PhoneStateListenerFlags.SignalStrengths);
+            signalStrengthReceiver.SignalStrengthsChanged += SignalStrengthReceiver_SignalStrengthsChanged;
+        }
+
+        protected override void OnStart()
+        {
+            base.OnStart();
             DetectNetwork();
+            InitBroadcastReceiver();
         }
 
         protected override void OnStop()
@@ -74,6 +89,39 @@ namespace NetworkDetection
             // Set the variable to nil, so that we know the receiver is no longer used.
             _broadcastReceiver.ConnectionStatusChanged -= OnNetworkStatusChanged;
             _broadcastReceiver = null;
+        }
+        
+        private void OnNetworkStatusChanged(object sender, EventArgs e)
+        {
+            NetworkStatusChanged?.Invoke(this, EventArgs.Empty);
+            DetectNetwork();
+        }
+        
+        private void SignalStrengthReceiver_SignalStrengthsChanged(SignalStrength pStrength)
+        {
+            /*
+            var parts = pStrength.ToString().Split(' ');
+            part[0] = "Signalstrength:"  _ignore this, it's just the title_
+            parts[1] = GsmSignalStrength
+            parts[2] = GsmBitErrorRate
+            parts[3] = CdmaDbm
+            parts[4] = CdmaEcio
+            parts[5] = EvdoDbm
+            parts[6] = EvdoEcio
+            parts[7] = EvdoSnr
+            parts[8] = LteSignalStrength
+            parts[9] = LteRsrp
+            parts[10] = LteRsrq
+            parts[11] = LteRssnr
+            parts[12] = LteCqi
+            parts[13] = gsm|lte|cdma
+            parts[14] = _not really sure what this number is_
+             */
+            var signalTypeName = Enum.GetName(typeof(NetworkType), _telephonyManager.NetworkType);
+
+            // Update the UI with text and an image.
+            _signalStrengthImage.SetImageLevel(pStrength.Level);
+            _signalStrength.Text = $"{signalTypeName} Signal Quality 0-4 ({pStrength.Level})";
         }
 
         private void DetectNetwork()

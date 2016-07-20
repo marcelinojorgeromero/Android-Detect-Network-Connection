@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<level-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:drawable="@drawable/gms_none_dr" android:minLevel="0" android:maxLevel="1" />
+  <item android:drawable="@drawable/gms_poor_dr" android:minLevel="2" android:maxLevel="2" />
+  <item android:drawable="@drawable/gms_fair_dr" android:minLevel="3" android:maxLevel="3" />
+  <item android:drawable="@drawable/gms_good_dr" android:minLevel="4" android:maxLevel="4" />
+</level-list>
